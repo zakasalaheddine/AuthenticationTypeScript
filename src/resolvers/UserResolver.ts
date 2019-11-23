@@ -1,9 +1,11 @@
-import { Resolver, Query, Mutation, Arg, Ctx } from 'type-graphql';
+import { Resolver, Query, Mutation, Arg, Ctx, Int, UseMiddleware } from 'type-graphql';
 import { User } from '../entity/User';
 import { hash, compare } from 'bcryptjs';
 import { Context } from '../Context';
 import { sendRefreshToken, createRefreshToken, createAccessToken } from '../authHelpers';
 import { LoginResponse } from './ResponseTypes';
+import { getConnection } from 'typeorm';
+import { authenticationMiddleware } from '../middleware/autheticationMiddleware';
 
 @Resolver()
 export class UserResolver{
@@ -13,7 +15,11 @@ export class UserResolver{
     }
 
     @Query(() => [User])
-    users(){
+    @UseMiddleware(authenticationMiddleware)
+    users(
+        @Ctx() { payload  } : Context
+    ){
+        console.log(payload);
         return User.find();
     }
 
@@ -75,5 +81,25 @@ export class UserResolver{
         } catch (error) {
             throw new Error(error);
         }
+    }
+
+    @Mutation(() => Boolean)
+    async logout(
+        @Ctx() { res }: Context
+    ){
+        sendRefreshToken(res, "");
+
+        return true;
+    }
+
+    @Mutation(() => Boolean)
+    async revokeRefreshtoken(
+        @Arg("userId", () => Int) userId: number
+    ){
+        await getConnection()
+        .getRepository("user")
+        .increment({ id: userId }, "tokenVersion", 1);
+
+        return true;
     }
 }

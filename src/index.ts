@@ -6,7 +6,8 @@ import { buildSchema } from "type-graphql";
 import { UserResolver } from "./resolvers/UserResolver";
 import { createConnection } from "typeorm";
 import cors from 'cors';
-import { authenticationMiddleware } from "./middleware/autheticationMiddleware";
+import { GetNewAccessTokenFromRefreshToken } from "./controllers/authenticationController";
+import cookieParser from "cookie-parser";
 
 
 
@@ -17,7 +18,9 @@ import { authenticationMiddleware } from "./middleware/autheticationMiddleware";
     await createConnection();
 
     app.use(cors());
-    app.use(authenticationMiddleware);
+    app.use(cookieParser());
+
+    app.post('/refresh_token', GetNewAccessTokenFromRefreshToken);
 
     const apolloServer = new ApolloServer({
         schema: await buildSchema({
